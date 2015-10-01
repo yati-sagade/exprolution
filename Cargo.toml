@@ -1,0 +1,12 @@
+[package]
+name = "exprolution"
+version = "0.1.0"
+authors = ["Yati Sagade <yati.sagade@gmail.com>"]
+
+[dependencies]
+num = "*"
+rand = "*"
+bit-vec = "*"
+
+
+
