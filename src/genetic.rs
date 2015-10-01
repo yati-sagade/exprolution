@@ -124,10 +124,7 @@ impl Chromosome {
     /// Construct a Chromosome with a random bit pattern, given a target number.
     pub fn random(target: f64) -> Chromosome {
         let size = thread_rng().gen_range(CHROMOSOME_MIN, CHROMOSOME_MAX) * 4;
-        let bits = BitVec::from_fn(size, |i| -> bool {
-            // emit 1 or 0 roughly equal number of times
-           randrange(0.0, 1.0) < 0.5
-        });
+        let bits = BitVec::from_fn(size, |_| randbit());
         Chromosome::new(bits, target)
     }
 
