@@ -62,13 +62,13 @@ pub fn bitstring(b: &BitVec) -> String {
 /// in that order.
 fn get_symbol(n: u8) -> String {
     match n {
-        0 ... 9 => n   .to_string(),
-             10 => "+" .to_string(),
-             11 => "-" .to_string(),
-             12 => "*" .to_string(),
-             13 => "/" .to_string(),
-             14 => "**".to_string(),
-              _ => ""  .to_string(),
+        0 ... 9 => n.to_string(),
+             10 => String::from("+"),
+             11 => String::from("-"),
+             12 => String::from("*"),
+             13 => String::from("/"),
+             14 => String::from("**"),
+              _ => String::from(""),
     }
 }
 

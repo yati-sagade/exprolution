@@ -5,45 +5,45 @@ pub type Result<T> = result::Result<T, String>;
 
 #[derive(Debug,Clone)]
 pub enum Op {
-    OpAdd,
-    OpSub,
-    OpDiv,
-    OpMul,
-    OpExp,
-    OpUnNeg
+    Add,
+    Sub,
+    Div,
+    Mul,
+    Exp,
+    UnNeg
 }
 
 impl Op {
     fn from_str(op: &str) -> Option<Op> {
         match op {
-            "+"  => Some(Op::OpAdd),
-            "-"  => Some(Op::OpSub),
-            "/"  => Some(Op::OpDiv),
-            "*"  => Some(Op::OpMul),
-            "**" => Some(Op::OpExp),
+            "+"  => Some(Op::Add),
+            "-"  => Some(Op::Sub),
+            "/"  => Some(Op::Div),
+            "*"  => Some(Op::Mul),
+            "**" => Some(Op::Exp),
             _    => None,
         }
     }
 
     fn precedence(&self) -> u8 {
         match *self {
-            Op::OpAdd   => 0,
-            Op::OpSub   => 0,
-            Op::OpDiv   => 1,
-            Op::OpMul   => 1,
-            Op::OpExp   => 2,
-            Op::OpUnNeg => 3,
+            Op::Add   => 0,
+            Op::Sub   => 0,
+            Op::Div   => 1,
+            Op::Mul   => 1,
+            Op::Exp   => 2,
+            Op::UnNeg => 3,
         }
     }
 
     fn apply_binary(&self, a: f64, b: f64) -> Result<f64> {
         match *self {
-            Op::OpAdd   => Ok(a + b),
-            Op::OpSub   => Ok(a - b),
-            Op::OpDiv   => Ok(a / b),
-            Op::OpMul   => Ok(a * b),
-            Op::OpExp   => Ok(num::pow(a, b as usize)),
-            Op::OpUnNeg => Err("Not a binary operation".to_string()),
+            Op::Add   => Ok(a + b),
+            Op::Sub   => Ok(a - b),
+            Op::Div   => Ok(a / b),
+            Op::Mul   => Ok(a * b),
+            Op::Exp   => Ok(num::pow(a, b as usize)),
+            Op::UnNeg => Err("Not a binary operation".to_string()),
         }
     }
 }
@@ -59,21 +59,12 @@ fn is_operator_char(c: &char) -> bool {
 
 #[derive(Debug,Clone)]
 pub enum Tok {
-    TokNum(f64),
-    TokOp(Op),
-    TokVar(String),
-    TokRParen,
-    TokLParen
+    Num(f64),
+    Op(Op),
+    Var(String),
+    RParen,
+    LParen
 }
-
-#[derive(Debug)]
-pub enum Expr {
-    ExprNum(f64),
-    ExprOp(Op),
-    ExprBinary(Op, Box<Expr>, Box<Expr>),
-    ExprUnary(Op, Box<Expr>),
-}
-
 
 pub fn get_number<'a>(stream: &'a [char]) -> Option<(Tok, &'a [char])> {
     let mut i = 0;
@@ -89,7 +80,7 @@ pub fn get_number<'a>(stream: &'a [char]) -> Option<(Tok, &'a [char])> {
         number = number * 10f64 + d;
         i += 1
     }
-    if found { Some((Tok::TokNum(number), &stream[i..n])) } else { None }
+    if found { Some((Tok::Num(number), &stream[i..n])) } else { None }
 }
 
 pub fn get_operator<'a>(stream: &'a [char]) -> Option<Result<(Tok, &'a [char])>> {
@@ -105,7 +96,7 @@ pub fn get_operator<'a>(stream: &'a [char]) -> Option<Result<(Tok, &'a [char])>>
     }
     if !opstr.is_empty() {
         Some(Op::from_str(&opstr)
-                .map(|v| (Tok::TokOp(v), &stream[i..n]))
+                .map(|v| (Tok::Op(v), &stream[i..n]))
                 .ok_or(format!("Invalid operator sequence {:?}", opstr)))
     } else {
         None
@@ -117,8 +108,8 @@ pub fn get_paren<'a>(stream: &'a [char]) -> Option<(Tok, &'a [char])> {
     let n = stream.len();
     if n > 0 {
         match stream[0] {
-            '(' => Some(Tok::TokLParen),
-            ')' => Some(Tok::TokRParen),
+            '(' => Some(Tok::LParen),
+            ')' => Some(Tok::RParen),
             _   => None
         }
     } else {
@@ -136,7 +127,7 @@ pub fn get_var<'a>(stream: &'a [char]) -> Option<(Tok, &'a [char])> {
         i += 1;
     }
     if !var.is_empty() {
-        Some((Tok::TokVar(var), &stream[i..n]))
+        Some((Tok::Var(var), &stream[i..n]))
     } else {
         None
     }
@@ -190,16 +181,16 @@ pub fn postfix(e: &str) -> Result<Vec<Tok>> {
     let mut tokens = try!(tok(e));
     let mut post: Vec<Tok> = Vec::new();
     let mut stack: Vec<Tok> = Vec::new();
-    stack.push(Tok::TokLParen);
-    tokens.push(Tok::TokRParen);
+    stack.push(Tok::LParen);
+    tokens.push(Tok::RParen);
     
     for token in &tokens {
         match *token {
-            Tok::TokNum(n) => post.push(token.clone()),
-            Tok::TokOp(ref op) => {
+            Tok::Num(n) => post.push(token.clone()),
+            Tok::Op(ref op) => {
                 while !stack.is_empty() {
                     if stack.last().map_or(false, |t| -> bool {
-                        if let Tok::TokOp(ref pp) = *t {
+                        if let Tok::Op(ref pp) = *t {
                             pp.precedence() > op.precedence()
                         } else {
                             false
@@ -209,16 +200,16 @@ pub fn postfix(e: &str) -> Result<Vec<Tok>> {
                 }
                 stack.push(token.clone());
             },
-            Tok::TokLParen => {
+            Tok::LParen => {
                 stack.push(token.clone());
             },
-            Tok::TokRParen => {
+            Tok::RParen => {
                 loop {
                     let top = stack.pop();
                     if top.is_none() {
                         return Err("Syntax error".to_string());
                     }
-                    if let Some(Tok::TokLParen) = top {
+                    if let Some(Tok::LParen) = top {
                         break;
                     }
                     post.push(top.unwrap());
@@ -237,8 +228,8 @@ pub fn eval(s: &str) -> Result<f64> {
     let mut stack = Vec::new();
     for token in &post {
         match *token {
-            Tok::TokNum(n) => stack.push(n),
-            Tok::TokOp(ref op) => {
+            Tok::Num(n) => stack.push(n),
+            Tok::Op(ref op) => {
                 let b = try!(stack.pop().ok_or("Premature stack end".to_string()));
                 let a = try!(stack.pop().ok_or("Premature stack end".to_string()));
                 let r = try!(op.apply_binary(a, b));
@@ -259,17 +250,17 @@ pub mod tests {
     pub fn test_tokenize() {
         let expr = "1 + 2 - 5 + (7 +8)";
         let toks = tokenize(expr);
-        let expected = vec![Tok::TokNum(1f64),
-                            Tok::TokOp(Op::OpAdd),
-                            Tok::TokNum(2f64),
-                            Tok::TokOp(Op::OpSub),
-                            Tok::TokNum(5f64),
-                            Tok::TokOp(Op::OpAdd),
-                            Tok::TokLParen,
-                            Tok::TokNum(7f64),
-                            Tok::TokOp(Op::OpAdd),
-                            Tok::TokNum(8f64),
-                            Tok::TokRParen];
+        let expected = vec![Tok::Num(1f64),
+                            Tok::Op(Op::Add),
+                            Tok::Num(2f64),
+                            Tok::Op(Op::Sub),
+                            Tok::Num(5f64),
+                            Tok::Op(Op::Add),
+                            Tok::LParen,
+                            Tok::Num(7f64),
+                            Tok::Op(Op::Add),
+                            Tok::Num(8f64),
+                            Tok::RParen];
 
         assert_eq!(toks, expected);
     }
